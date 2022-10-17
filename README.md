@@ -5,7 +5,7 @@ by Giovanni Dicanio
 
 Code that implements utility functions to convert between Unicode UTF-8 and Unicode UTF-16.
 
-UTF-8 strings are stored as `std::string` instances; UTF-16 strings are represented 
+**UTF-8** strings are stored as `std::string` instances; **UTF-16** strings are represented 
 using `std::wstring`.
 
 There are also conversion overloads that take `std::[w]string_view`s 
@@ -20,7 +20,7 @@ header file.
 
 `Utf8ConvTest.cpp` contains some test code for the library: check it out for some sample usage.
 
-The library exposes two main conversion functions: `Utf8ToUtf16()` and `Utf16ToUtf8()`.
+The library exposes two main conversion functions: **`Utf8ToUtf16()`** and **`Utf16ToUtf8()`**.
 Conversion errors are signaled throwing exceptions.
 
 For example, you can simply convert a string from UTF-8 to UTF-16 using code like this:
