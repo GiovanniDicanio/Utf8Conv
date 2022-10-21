@@ -1,4 +1,4 @@
-# Utf8Conv v1.0.0
+# Utf8Conv v1.0.0-cpp14 (C++14 Compatible Branch)
 ## Unicode UTF-8 &lt;-> Unicode UTF-16 Conversion Utility Functions for Windows C++ Code
 
 by Giovanni Dicanio
@@ -8,11 +8,10 @@ Code that implements utility functions to convert between Unicode UTF-8 and Unic
 **UTF-8** strings are stored as `std::string` instances; **UTF-16** strings are represented 
 using `std::wstring`.
 
-There are also conversion overloads that take `std::[w]string_view`s 
+There are also conversion overloads that take "string views" (represented as a pointer and a count)
 and C-style NUL-terminated string pointers.
 
-This code is currently being developed using **Visual Studio 2019** (v16.9.1) with C++17 features 
-enabled (`/std:c++17`).
+This is a branch developed using **Visual Studio 2019** (v16.9.1) in default C++14 mode.
 The code compiles cleanly at warning level 4 (`/W4`) in both 32-bit and 64-bit builds.
 
 This is a **header-only** library, implemented in the **[`Utf8Conv.hpp`](Utf8Conv/Utf8Conv.hpp)** 

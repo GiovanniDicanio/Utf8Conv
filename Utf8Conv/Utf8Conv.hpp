@@ -10,7 +10,7 @@
 //
 //
 // First version: 2016, September 1st
-// Last update:   2022, October 17th
+// Last update:   2022, October 21st
 //
 // E-mail: <first name>.<last name> AT REMOVE_THIS gmail.com
 //
@@ -38,7 +38,7 @@
 // ---------------------------------------------------------------------------
 //
 // Compiler: Visual Studio 2019
-// C++ Language Standard: ISO C++17 Standard (/std:c++17)
+// C++ Language Standard: Default (ISO C++14)
 // Code compiles cleanly at warning level 4 (/W4) on both 32-bit and 64-bit builds.
 //
 // Requires building in Unicode mode (which has been the default since VS2005).
@@ -100,10 +100,11 @@
 #include <Windows.h>        // Windows Platform SDK
 #include <crtdbg.h>         // _ASSERTE
 
+#include <string.h>         // For strlen, wcslen
+
 #include <limits>           // For std::numeric_limits
 #include <stdexcept>        // For std::overflow_error
 #include <string>           // For std::string, std::wstring
-#include <string_view>      // For std::string_view, std::wstring_view
 #include <system_error>     // For std::system_error
 
 
@@ -127,21 +128,29 @@ class Utf8ConversionException;
 // Throws Utf8ConversionException on conversion errors
 // (e.g. invalid UTF-16 sequence found in input string).
 //------------------------------------------------------------------------------
-[[nodiscard]] std::string Utf16ToUtf8(const std::wstring& utf16);
+std::string Utf16ToUtf8(const std::wstring& utf16);
 
 //------------------------------------------------------------------------------
-// Convert the input string *view* from UTF-16 to UTF-8.
+// Convert the input "string view" from UTF-16 to UTF-8.
 // Throws Utf8ConversionException on conversion errors
 // (e.g. invalid UTF-16 sequence found in input string).
+// 'utf16Count' represents the number of input wchar_ts, excluding the
+// terminating NUL (if any).
+//
+// ** Special cases of empty input string**
+// If the input pointer is nullptr, 'utf16Count' must be 0, and an empty string
+// is returned.
+// If the input pointer points to L'\0', 'utf16Count' must be 0, and an empty
+// string is returned.
 //------------------------------------------------------------------------------
-[[nodiscard]] std::string Utf16ToUtf8(std::wstring_view utf16);
+std::string Utf16ToUtf8(const wchar_t* utf16Begin, size_t utf16Count);
 
 //------------------------------------------------------------------------------
 // Convert the input NUL-terminated C-style string pointer from UTF-16 to UTF-8.
 // Throws Utf8ConversionException on conversion errors
 // (e.g. invalid UTF-16 sequence found in input string).
 //------------------------------------------------------------------------------
-[[nodiscard]] std::string Utf16ToUtf8(_In_opt_z_ const wchar_t* utf16);
+std::string Utf16ToUtf8(_In_opt_z_ const wchar_t* utf16);
 
 
 //==============================================================================
@@ -153,21 +162,29 @@ class Utf8ConversionException;
 // Throws Utf8ConversionException on conversion errors
 // (e.g. invalid UTF-8 sequence found in input string).
 //------------------------------------------------------------------------------
-[[nodiscard]] std::wstring Utf8ToUtf16(const std::string& utf8);
+std::wstring Utf8ToUtf16(const std::string& utf8);
 
 //------------------------------------------------------------------------------
-// Convert the input string *view* from UTF-8 to UTF-16.
+// Convert the input "string view" from UTF-8 to UTF-16.
 // Throws Utf8ConversionException on conversion errors
 // (e.g. invalid UTF-8 sequence found in input string).
+// 'utf8Count' represents the number of input chars, excluding the
+// terminating NUL (if any).
+//
+// // ** Special cases of empty input string**
+// If the input pointer is nullptr, 'utf8Count' must be 0, and an empty string
+// is returned.
+// If the input pointer points to '\0', 'utf8Count' must be 0, and an empty
+// string is returned.
 //------------------------------------------------------------------------------
-[[nodiscard]] std::wstring Utf8ToUtf16(std::string_view utf8);
+std::wstring Utf8ToUtf16(const char* utf8Begin, size_t utf8Count);
 
 //------------------------------------------------------------------------------
 // Convert the input NUL-terminated C-style string pointer from UTF-8 to UTF-16.
 // Throws Utf8ConversionException on conversion errors
 // (e.g. invalid UTF-8 sequence found in input string).
 //------------------------------------------------------------------------------
-[[nodiscard]] std::wstring Utf8ToUtf16(_In_opt_z_ const char* utf8);
+std::wstring Utf8ToUtf16(_In_opt_z_ const char* utf8);
 
 //==============================================================================
 
@@ -195,7 +212,7 @@ public:
     Utf8ConversionException(DWORD errorCode, const std::string& message, ConversionType type);
 
     // Direction of the conversion (e.g. from UTF-8 to UTF-16)
-    [[nodiscard]] ConversionType Direction() const noexcept;
+    ConversionType Direction() const noexcept;
 
 
 private:
@@ -248,7 +265,7 @@ namespace detail
 // Returns true if the input 'size_t' value overflows the maximum value
 // that can be stored in an 'int'
 //------------------------------------------------------------------------------
-[[nodiscard]] inline bool ValueOverflowsInt(size_t value)
+inline bool ValueOverflowsInt(size_t value)
 {
     if (value > static_cast<size_t>((std::numeric_limits<int>::max)()))
     {
@@ -265,7 +282,7 @@ namespace detail
 // Returns true if the input string pointer is null or it points to an empty
 // string ('\0')
 //------------------------------------------------------------------------------
-[[nodiscard]] inline bool IsNullOrEmpty(_In_opt_z_ const char* psz)
+inline bool IsNullOrEmpty(_In_opt_z_ const char* psz)
 {
     if (psz == nullptr)
     {
@@ -285,7 +302,7 @@ namespace detail
 // Returns true if the input string pointer is null or it points to an empty
 // string (L'\0')
 //------------------------------------------------------------------------------
-[[nodiscard]] inline bool IsNullOrEmpty(_In_opt_z_ const wchar_t* psz)
+inline bool IsNullOrEmpty(_In_opt_z_ const wchar_t* psz)
 {
     if (psz == nullptr)
     {
@@ -331,7 +348,7 @@ inline std::string Utf16ToUtf8(const std::wstring& utf16)
         return std::string{};
     }
 
-    return Utf16ToUtf8(std::wstring_view{ utf16.data(), utf16.size() });
+    return Utf16ToUtf8(utf16.data(), utf16.size());
 }
 
 
@@ -347,8 +364,8 @@ inline std::string Utf16ToUtf8(_In_opt_z_ const wchar_t* utf16)
     // when compiled with VS2019 v16.9.1:
     //
     // ---------------------------------------------------------------------------------------
-    // 'utf16' could be '0':  this does not adhere to the specification
-    // for the function 'std::basic_string_view<wchar_t,std::char_traits<wchar_t> >::{ctor}'.
+    // 'utf16' could be '0':  this does not adhere to the specification for the function
+    // 'wcslen'.
     // ---------------------------------------------------------------------------------------
     //
     // But the code analyzer was unable to understand that I *did* a proper check
@@ -357,42 +374,50 @@ inline std::string Utf16ToUtf8(_In_opt_z_ const wchar_t* utf16)
     // So, this is actually a spurious warning, that I'm disabling it here:
     //
     #pragma warning (suppress: 6387)
-    return Utf16ToUtf8(std::wstring_view{ utf16 });
+    return Utf16ToUtf8(utf16, wcslen(utf16));
 }
 
 
-inline std::string Utf16ToUtf8(std::wstring_view utf16)
+inline std::string Utf16ToUtf8(const wchar_t* utf16Begin, const size_t utf16Count)
 {
-    if (utf16.empty())
+    // Special cases of empty strings
+    if (utf16Begin == nullptr)
     {
+        _ASSERTE(utf16Count == 0);
         return std::string{};
     }
+
+    if (*utf16Begin == L'\0')
+    {
+        _ASSERTE(utf16Count == 0);
+        return std::string{};
+    }
+
 
     // Safely fail if an invalid UTF-16 character sequence is encountered
     constexpr DWORD kFlags = WC_ERR_INVALID_CHARS;
 
 #ifdef GIOVANNI_DICANIO_UTF8CONV_ALWAYS_CHECK_INTEGER_OVERFLOWS
-    // Safely cast the length of the source UTF-16 string from size_t
-    // (returned by std::wstring_view::length()) to int
+    // Safely cast the length of the source UTF-16 string from size_t to int
     // for the WideCharToMultiByte API.
     // If the size_t value is too big, throw an exception to prevent overflows.
-    if (detail::ValueOverflowsInt(utf16.length()))
+    if (detail::ValueOverflowsInt(utf16Count))
     {
         throw std::overflow_error(
             "[Utf8Conv::Utf16ToUt8] Input string too long: size_t-length doesn't fit into int.");
     }
 #else
     // Only check in debug-builds
-    _ASSERTE(! detail::ValueOverflowsInt(utf16.length()));
+    _ASSERTE(! detail::ValueOverflowsInt(utf16Count));
 #endif
 
-    const int utf16Length = static_cast<int>(utf16.length());
+    const int utf16Length = static_cast<int>(utf16Count);
 
     // Get the length, in chars, of the resulting UTF-8 string
     const int utf8Length = ::WideCharToMultiByte(
         CP_UTF8,            // convert to UTF-8
         kFlags,             // conversion flags
-        utf16.data(),       // source UTF-16 string
+        utf16Begin,         // source UTF-16 string
         utf16Length,        // length of source UTF-16 string, in wchar_ts
         nullptr,            // unused - no conversion required in this step
         0,                  // request size of destination buffer, in chars
@@ -419,9 +444,9 @@ inline std::string Utf16ToUtf8(std::wstring_view utf16)
     int result = ::WideCharToMultiByte(
         CP_UTF8,            // convert to UTF-8
         kFlags,             // conversion flags
-        utf16.data(),       // source UTF-16 string
+        utf16Begin,         // source UTF-16 string
         utf16Length,        // length of source UTF-16 string, in wchar_ts
-        utf8.data(),        // pointer to destination buffer
+        &utf8[0],           // pointer to destination buffer
         utf8Length,         // size of destination buffer, in chars
         nullptr, nullptr    // unused
     );
@@ -450,7 +475,7 @@ inline std::wstring Utf8ToUtf16(const std::string& utf8)
         return std::wstring{};
     }
 
-    return Utf8ToUtf16(std::string_view{ utf8.data(), utf8.size() });
+    return Utf8ToUtf16(utf8.data(), utf8.size());
 }
 
 
@@ -465,10 +490,10 @@ inline std::wstring Utf8ToUtf16(_In_opt_z_ const char* utf8)
     // The following line generates a Warning C6387
     // when compiled with VS2019 v16.9.1:
     //
-    // ---------------------------------------------------------------------------------
-    // 'utf8' could be '0':  this does not adhere to the specification
-    // for the function 'std::basic_string_view<char,std::char_traits<char> >::{ctor}'.
-    // ---------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------
+    // 'utf8' could be '0':  this does not adhere to the specification for the function
+    // 'strlen'.
+    // ---------------------------------------------------------------------------------------
     //
     // But the code analyzer was unable to understand that I *did* a proper check
     // for nullptr in the above detail::IsNullOrEmpty() call.
@@ -476,16 +501,25 @@ inline std::wstring Utf8ToUtf16(_In_opt_z_ const char* utf8)
     // So, this is actually a spurious warning, that I'm disabling it here:
     //
     #pragma warning (suppress: 6387)
-    return Utf8ToUtf16(std::string_view{ utf8 });
+    return Utf8ToUtf16(utf8, strlen(utf8));
 }
 
 
-inline std::wstring Utf8ToUtf16(std::string_view utf8)
+inline std::wstring Utf8ToUtf16(const char* utf8Begin, const size_t utf8Count)
 {
-    if (utf8.empty())
+    // Special cases of empty strings
+    if (utf8Begin == nullptr)
     {
+        _ASSERTE(utf8Count == 0);
         return std::wstring{};
     }
+
+    if (*utf8Begin == '\0')
+    {
+        _ASSERTE(utf8Count == 0);
+        return std::wstring{};
+    }
+
 
     // Safely fail if an invalid UTF-8 character sequence is encountered
     constexpr DWORD kFlags = MB_ERR_INVALID_CHARS;
@@ -495,23 +529,23 @@ inline std::wstring Utf8ToUtf16(std::string_view utf8)
     // (returned by std::string_view::length()) to int
     // for the MultiByteToWideChar API.
     // If the size_t value is too big, throw an exception to prevent overflows.
-    if (detail::ValueOverflowsInt(utf8.length()))
+    if (detail::ValueOverflowsInt(utf8Count))
     {
         throw std::overflow_error(
             "[Utf8Conv::Utf8ToUtf16] Input string too long: size_t-length doesn't fit into int.");
     }
 #else
     // Only check in debug-builds
-    _ASSERTE(! detail::ValueOverflowsInt(utf8.length()));
+    _ASSERTE(! detail::ValueOverflowsInt(utf8Count));
 #endif
 
-    const int utf8Length = static_cast<int>(utf8.length());
+    const int utf8Length = static_cast<int>(utf8Count);
 
     // Get the size of the destination UTF-16 string
     const int utf16Length = ::MultiByteToWideChar(
         CP_UTF8,       // source string is in UTF-8
         kFlags,        // conversion flags
-        utf8.data(),   // source UTF-8 string pointer
+        utf8Begin,     // source UTF-8 string pointer
         utf8Length,    // length of the source UTF-8 string, in chars
         nullptr,       // unused - no conversion done in this step
         0              // request size of destination buffer, in wchar_ts
@@ -537,9 +571,9 @@ inline std::wstring Utf8ToUtf16(std::string_view utf8)
     int result = ::MultiByteToWideChar(
         CP_UTF8,       // source string is in UTF-8
         kFlags,        // conversion flags
-        utf8.data(),   // source UTF-8 string pointer
+        utf8Begin,     // source UTF-8 string pointer
         utf8Length,    // length of source UTF-8 string, in chars
-        utf16.data(),  // pointer to destination buffer
+        &utf16[0],     // pointer to destination buffer
         utf16Length    // size of destination buffer, in wchar_ts
     );
     if (result == 0)
